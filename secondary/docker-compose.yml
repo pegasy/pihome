@@ -1,0 +1,12 @@
+version: '3.7'
+
+services:
+  lancache-dns:
+    container_name: lancache-dns
+    image: pegasy/lancachenet_lancache-dns:latest
+    restart: unless-stopped
+    dns:
+      - 192.168.2.1
+      - 1.1.1.1
+    ports:
+      - '192.168.2.20:53:53/udp'
