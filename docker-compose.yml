@@ -1,0 +1,51 @@
+version: '3.7'
+
+services:
+  pihole:
+    container_name: pihole
+    domainname: docker
+    hostname: pihole
+    image: pihole/pihole:latest
+    ports:
+      - '${SERVER_IP}:53:53/tcp'
+      - '${SERVER_IP}:53:53/udp'
+      # - '${SERVER_IP}:67:67/udp'
+      - '${SERVER_IP}:80:80'
+      - '${SERVER_IP}:443:443'
+    restart: unless-stopped
+    volumes:
+      - ${USERDIR}/docker/pihole/pihole:/etc/pihole
+      # - ${USERDIR}/docker/pihole/pihole.log:/var/log/pihole.log
+      - ${USERDIR}/docker/pihole/dnsmasq.d:/etc/dnsmasq.d
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - ServerIP=${SERVER_IP}
+      - TZ=${TZ}
+      - WEBPASSWORD=PIHOLEWEBPASSWORD
+      - DNS1=127.0.0.1
+      - DNS2=192.168.2.3
+      - DNS3=1.1.1.1
+  lancache-dns:
+    container_name: lancache-dns
+    image: pegasy/lancachenet_lancache-dns:latest
+    ports:
+      - '192.168.2.3:53:53/udp'
+      - '192.168.2.3:53:53/tcp'
+    environment:
+      - USE_GENERIC_CACHE=true
+      - LANCACHE_IP=192.168.2.3
+  gamecache:
+    container_name: gamecache
+    image: pegasy/lancachenet_monolithic:latest
+    ports:
+      - '192.168.2.3:80:80'
+      - '192.168.2.4:80:80'
+    volumes:
+      - ${USERDIR}/docker/gamecache/data:/data/cache
+      - ${USERDIR}/docker/gamecache/logs:/data/logs
+    environment:
+      - UPSTREAM_DNSUPSTREAM_DNS="192.168.2.3 ${SERVER_IP} 1.1.1.1"
+      - CACHE_MEM_SIZE=500m
+      - CACHE_DISK_SIZE=10000m
+      - CACHE_MAX_AGE=30d
