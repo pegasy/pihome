@@ -6,46 +6,75 @@ services:
     domainname: docker
     hostname: pihole
     image: pihole/pihole:latest
+    restart: unless-stopped
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
     ports:
       - '${SERVER_IP}:53:53/tcp'
       - '${SERVER_IP}:53:53/udp'
       # - '${SERVER_IP}:67:67/udp'
       - '${SERVER_IP}:80:80'
       - '${SERVER_IP}:443:443'
-    restart: unless-stopped
     volumes:
       - ${USERDIR}/docker/pihole/pihole:/etc/pihole
       # - ${USERDIR}/docker/pihole/pihole.log:/var/log/pihole.log
       - ${USERDIR}/docker/pihole/dnsmasq.d:/etc/dnsmasq.d
-    cap_add:
-      - NET_ADMIN
+    # cap_add:
+    #   - NET_ADMIN
     environment:
       - ServerIP=${SERVER_IP}
       - TZ=${TZ}
       - WEBPASSWORD=PIHOLEWEBPASSWORD
-      - DNS1=127.0.0.1
-      - DNS2=192.168.2.3
-      - DNS3=1.1.1.1
+      - DNS1=192.168.2.11#53
+      - DNS2=192.168.2.12#53
+      #- DNS2=192.168.2.12#53
+      #- DNS2=${SERVER_IP}
+      # - DNS3=1.1.1.1
+      # - DNS1=127.0.0.1
+      # - DNS2=192.168.2.3
+      # - DNS3=1.1.1.1
+  sniproxy:
+    container_name: sniproxy
+    image: pegasy/lancachenet_sniproxy:latest
+    restart: unless-stopped
+    ports:
+      - '192.168.2.11:443:443'
+      - '192.168.2.12:443:443'
+      # - '192.168.2.13:443:443'
+      # - '192.168.2.14:443:443'
   lancache-dns:
     container_name: lancache-dns
     image: pegasy/lancachenet_lancache-dns:latest
+    restart: unless-stopped
+    dns:
+      - 192.168.2.1
+      - 1.1.1.1
     ports:
-      - '192.168.2.3:53:53/udp'
-      - '192.168.2.3:53:53/tcp'
+      - '192.168.2.11:53:53/udp'
+      # - '192.168.2.11:53:53/tcp'
+      - '192.168.2.12:53:53/udp'
+      # - '192.168.2.12:53:53/tcp'
     environment:
       - USE_GENERIC_CACHE=true
-      - LANCACHE_IP=192.168.2.3
-  gamecache:
-    container_name: gamecache
+      # - LANCACHE_IP=192.168.2.11 192.168.2.12
+      #- LANCACHE_IP="192.168.2.11 192.168.2.12"
+      - LANCACHE_IP=192.168.2.11 192.168.2.12 192.168.2.13 192.168.2.14
+      # - UPSTREAM_DNS=192.168.2.1
+  lancache:
+    container_name: lancache
     image: pegasy/lancachenet_monolithic:latest
+    restart: unless-stopped
     ports:
-      - '192.168.2.3:80:80'
-      - '192.168.2.4:80:80'
+      - '192.168.2.11:80:80'
+      - '192.168.2.12:80:80'
+      - '192.168.2.13:80:80'
+      - '192.168.2.14:80:80'
     volumes:
-      - ${USERDIR}/docker/gamecache/data:/data/cache
-      - ${USERDIR}/docker/gamecache/logs:/data/logs
+      - ${USERDIR}/docker/lancache/data:/data/cache
+      - ${USERDIR}/docker/lancache/logs:/data/logs
     environment:
-      - UPSTREAM_DNSUPSTREAM_DNS="192.168.2.3 ${SERVER_IP} 1.1.1.1"
-      - CACHE_MEM_SIZE=500m
+      #- UPSTREAM_DNS="192.168.2.11 ${SERVER_IP} 1.1.1.1"
+      - CACHE_MEM_SIZE=1000m
       - CACHE_DISK_SIZE=10000m
       - CACHE_MAX_AGE=30d
